@@ -138,10 +138,10 @@ class CLaravelDatatablesRepository {
 			return $this->emptyDataTables();
 		}
 
-		$draw           = request( 'draw', 1 ); /*获取请求次数*/
-		$start          = request( 'start', config( 'admin.global.list.start' ) ); /*获取开始*/
-		$length         = request( 'length', config( 'admin.global.list.length' ) ); ///*获取条数*/
-		$search_pattern = request( 'search.regex', true ); /*是否启用模糊搜索*/
+		$draw           = request( 'draw', $this->getConfig( 'default.draw' ) ); /*获取请求次数*/
+		$start          = request( 'start', $this->getConfig( 'default.start' ) ); /*获取开始*/
+		$length         = request( 'length', $this->getConfig( 'default.length' ) ); ///*获取条数*/
+		$search_pattern = request( 'search.regex', $this->getConfig( 'default.searchRegex' ) ); /*是否启用模糊搜索*/
 		$columns        = collect( $this->columns );
 		$search_columns = $columns->where( 'search', true );
 		$search_columns->each( function ( $item ) use ( $search_pattern ) {
@@ -210,37 +210,7 @@ class CLaravelDatatablesRepository {
 										$this->buildActionButton( $actionButton, $vv, $item );
 									}
 								}
-							} else {
-								if ( $v['data_type'] == 'redis' ) {
-									$data = $v['data'];
-									$key  = $v['key'];
-									preg_match_all( "/{.*?}/", $key, $matchs );
-									$parameters = [];
-									foreach ( $matchs as $match ) {
-										foreach ( $match as $vvvv ) {
-											$r = str_replace( [ "{", "}" ], [ "", "" ], $vvvv );
-											if ( isset( $v['encryption'] ) && sizeof( $encryption = explode( '|', $v['encryption'] ) ) == 2 ) {
-												if ( $encryption[1] == $r ) {
-													$parameters[ $r ] = alphaID( $item[ $r ], config( $encryption[0] ), true );
-												} else {
-													$parameters[ $r ] = $item[ $r ];
-												}
-											} else {
-												$parameters[ $r ] = $item[ $r ];
-											}
-										}
-									}
-									foreach ( $parameters as $k => $v ) {
-										$key = str_replace( '{' . $k . '}', $v, $key );
-									}
-									foreach ( $data as $kk => $vv ) {
-										if ( meeting_bbs_config()->get( $key ) == $kk ) {
-											$this->buildActionButton( $actionButton, $vv, $item );
-										}
-									}
-								}
 							}
-
 						} elseif ( $v['type'] == 'coexist' ) {
 							$data = $v['data'];
 							foreach ( $data as $kk => $vv ) {
@@ -291,7 +261,7 @@ class CLaravelDatatablesRepository {
 							}
 						}
 					}
-					$url = meetingRoute( $route, $parameters );
+					$url = call_user_func_array( config( 'datatables.function.route' ), [ $route, $parameters ] );
 				}
 			}
 			array_push( $actionButton, [
@@ -303,6 +273,10 @@ class CLaravelDatatablesRepository {
 	}
 
 	public function emptyDataTables() {
-		return config( 'datatables.emptyData' );
+		return $this->getConfig( 'emptyData' );
+	}
+
+	protected function getConfig( $key ) {
+		return config( "datatables.{$key}" );
 	}
 }

@@ -6,6 +6,15 @@
  * Time: 5:43 PM
  */
 return [
+	'default'   => [
+		'draw'        => 1,
+		'start'       => 10,
+		'length'         => 20,
+		'searchRegex' => true,
+	],
+	'function'  => [
+		'route' => 'meetingRoute'
+	],
 	'emptyData' => [
 		'draw'            => 0,
 		'recordsTotal'    => 0,
