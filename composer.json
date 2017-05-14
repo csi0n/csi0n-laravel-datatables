@@ -1,0 +1,18 @@
+{
+    "name": "csi0n/laravel-datatables",
+    "description": "Simple return lists in laravel.",
+    "keywords": ["laravel", "datatables", "lists","helper"],
+    "license": "MIT",
+    "authors": [{
+        "name": "csi0n",
+        "email": "chqssqll@gmail.com"
+    }],
+    "require": {
+        "php": ">=5.5.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "csi0n\\Laravel\\Datatables\\": "src/"
+        }
+    }
+}
