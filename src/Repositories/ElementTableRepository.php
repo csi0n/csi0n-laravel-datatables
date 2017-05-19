@@ -8,6 +8,7 @@
 
 namespace csi0n\Laravel\Datatables\Repositories;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ElementTableRepository extends BaseDatatablesRepisitory implements IDatatablesRepository
 {
@@ -36,32 +37,49 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
     public function render($itemCallback = '', $column = ['*'])
     {
         if (!empty($config = $this->config) && is_array($config)) {
-            if (!isset($config['columns']))
+            if (!isset($config['columns'])) {
                 return $this->emptyDataTables();
-            $columns = $config['columns'];
-            $columns = collect($columns);
+            }
+
+            $columns       = $config['columns'];
+            $columns       = collect($columns);
             $searchColumns = $columns->where('search', true);
-            $model = $this->model;
-            $allowColumns = $columns->pluck('name')->toArray();
+            $model         = $this->model;
+            $allowColumns  = $columns->pluck('name')->toArray();
             $searchColumns->each(function ($v, $k) use (&$model, &$allowColumns) {
                 if (isset($v['searchType']) && $v['searchType'] == 'input') {
-                    if (!empty($searchKey = request("search.{$v['name']}")))
+                    if (!empty($searchKey = request("search.{$v['name']}"))) {
                         $model = $model->where($v['name'], $searchKey);
+                    }
+
                 }
             });
             if (isset($config['paginate']) && is_array($paginate = $config['paginate'])) {
-                if (isset($paginate['limit'])) {
-                    $model = $model->offset(intval(request('page', 1)) - 1)->limit($paginate['limit']);
+                if (isset($paginate['page']) && is_int($paginate['page'])) {
+                    $models = $model->paginate($paginate['page']);
+                } else {
+                    $models = $model->paginate(20);
                 }
+            } else {
+                $models = $model->paginate(20);
             }
-            $models = $model->get($allowColumns);
-            if ($itemCallback instanceof \Closure)
-                $models->map(function ($item) use ($itemCallback) {
-                    $item = $itemCallback($item);
-                    return $item;
-                });
+            if ($models instanceof LengthAwarePaginator) {
+                $models->setCollection($this->itemCallback($itemCallback, $models->getCollection()));
+            }
             return $models;
         }
         return $this->emptyDataTables();
+    }
+
+    private function itemCallback($itemCallback, $models)
+    {
+        if ($itemCallback instanceof \Closure) {
+            $models->map(function ($item) use ($itemCallback) {
+                $item = $itemCallback($item);
+                return $item;
+            });
+        }
+
+        return $models;
     }
 }
