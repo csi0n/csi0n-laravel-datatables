@@ -48,10 +48,12 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
             $allowColumns  = $columns->pluck('name')->toArray();
             $searchColumns->each(function ($v, $k) use (&$model, &$allowColumns) {
                 if (isset($v['searchType']) && $v['searchType'] == 'input') {
-                    if (!empty($searchKey = request("search.{$v['name']}"))) {
-                        $model = $model->where($v['name'], $searchKey);
+                    if (!empty($search = request('search'))) {
+                        $search = json_decode($search, true);
+                        if (isset($search[$v['name']]) && !empty($searchKey = $search[$v['name']])) {
+                            $model = $model->where($v['name'], $searchKey);
+                        }
                     }
-
                 }
             });
             if (isset($config['paginate']) && is_array($paginate = $config['paginate'])) {
