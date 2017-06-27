@@ -68,20 +68,44 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
             if ($models instanceof LengthAwarePaginator) {
                 $models->setCollection($this->itemCallback($itemCallback, $models->getCollection()));
             }
-            return $models;
+            $renderColumns = collect(['render_columns' => $this->getConfigColumns()]);
+            return $renderColumns->merge($models);
         }
         return $this->emptyDataTables();
     }
-
+    private function getConfigColumns()
+    {
+        if (!isset($this->config['columns'])) {
+            return [];
+        }
+        return $this->config['columns'];
+    }
     private function itemCallback($itemCallback, $models)
     {
         if ($itemCallback instanceof \Closure) {
-            $models->map(function ($item) use ($itemCallback) {
+            $config = $this->config;
+            $models->map(function ($item) use ($itemCallback, $config) {
                 $item = $itemCallback($item);
+                if (!is_null($item) && $columns = $this->getConfigColumns()) {
+                    $array = [];
+
+                    // $item->getRelations()
+                    $renderColumns = array_keys($columns);
+                    $array         = array();
+                    foreach ($renderColumns as $key => $value) {
+                        array_set($array, $value, '');
+                    }
+                    $relations = $item->getRelations();
+                    foreach ($relations as $key => &$value) {
+                        if (isset($array[$key])) {
+                            $value->setVisible(array_keys($array[$key]));
+                        }
+                    }
+                    $item->setVisible(array_merge($renderColumns, array_keys($relations)));
+                }
                 return $item;
             });
         }
-
         return $models;
     }
 }
