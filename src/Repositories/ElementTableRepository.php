@@ -8,6 +8,7 @@
 
 namespace csi0n\Laravel\Datatables\Repositories;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 class ElementTableRepository extends BaseDatatablesRepisitory implements IDatatablesRepository
@@ -41,11 +42,11 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
                 return $this->emptyDataTables();
             }
 
-            $columns       = $config['columns'];
-            $columns       = collect($columns);
+            $columns = $config['columns'];
+            $columns = collect($columns);
             $searchColumns = $columns->where('search', true);
-            $model         = $this->model;
-            $allowColumns  = $columns->pluck('name')->toArray();
+            $model = $this->model;
+            $allowColumns = $columns->pluck('name')->toArray();
             $searchColumns->each(function ($v, $k) use (&$model, &$allowColumns) {
                 if (isset($v['searchType']) && $v['searchType'] == 'input') {
                     if (!empty($search = request('search'))) {
@@ -56,14 +57,18 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
                     }
                 }
             });
-            if (isset($config['paginate']) && is_array($paginate = $config['paginate'])) {
-                if (isset($paginate['page']) && is_int($paginate['page'])) {
-                    $models = $model->paginate($paginate['page']);
+            if (request()->has('per_page')) {
+                $models = $model->paginate(request()->per_page);
+            } else {
+                if (isset($config['paginate']) && is_array($paginate = $config['paginate'])) {
+                    if (isset($paginate['page']) && is_int($paginate['page'])) {
+                        $models = $model->paginate($paginate['page']);
+                    } else {
+                        $models = $model->paginate(20);
+                    }
                 } else {
                     $models = $model->paginate(20);
                 }
-            } else {
-                $models = $model->paginate(20);
             }
             if ($models instanceof LengthAwarePaginator) {
                 $models->setCollection($this->itemCallback($itemCallback, $models->getCollection()));
@@ -73,12 +78,24 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
         }
         return $this->emptyDataTables();
     }
+
     private function getConfigColumns()
     {
         if (!isset($this->config['columns'])) {
             return [];
         }
         return $this->config['columns'];
+    }
+
+    private function traverseRelation($array,$relations){
+        foreach ($relations as $key => &$value) {
+            if (isset($array[$key])) {
+                if ($value instanceof Model){
+                    $value->setVisible(array_keys($array[$key]));
+                    $this->traverseRelation($array,$value->getRelations());
+                }
+            }
+        }
     }
     private function itemCallback($itemCallback, $models)
     {
@@ -91,17 +108,18 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
 
                     // $item->getRelations()
                     $renderColumns = array_keys($columns);
-                    $array         = array();
+                    $array = array();
                     foreach ($renderColumns as $key => $value) {
                         array_set($array, $value, '');
                     }
                     $relations = $item->getRelations();
-                    foreach ($relations as $key => &$value) {
-                        if (isset($array[$key])) {
-                            $value->setVisible(array_keys($array[$key]));
-                        }
-                    }
-                    $item->setVisible(array_merge($renderColumns, array_keys($relations)));
+
+                    $this->traverseRelation($array,$relations);
+
+                    $item->setVisible(array_merge(
+                        $renderColumns,
+                        array_keys($relations),
+                        $this->config['enableAction'] ? ['optionsButton'] : []));
                 }
                 return $item;
             });
