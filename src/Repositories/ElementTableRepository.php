@@ -52,7 +52,7 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
                     if (!empty($search = request('search'))) {
                         $search = json_decode($search, true);
                         if (isset($search[$v['name']]) && !empty($searchKey = $search[$v['name']])) {
-                            $model = $model->where($v['name'], $searchKey);
+                            $model = $model->orWhere($v['name'], 'like',"%{$searchKey}%");
                         }
                     }
                 }
