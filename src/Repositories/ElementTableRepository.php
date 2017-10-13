@@ -44,7 +44,7 @@ class ElementTableRepository extends BaseDatatablesRepisitory implements IDatata
 
             $columns = $config['columns'];
             $columns = collect($columns);
-            $searchColumns = $columns->where('search', true);
+            $searchColumns = $columns->where('searchable', true);
             $model = $this->model;
             $allowColumns = $columns->pluck('name')->toArray();
             $searchColumns->each(function ($v, $k) use (&$model, &$allowColumns) {
